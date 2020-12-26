@@ -1,22 +1,18 @@
 from PIL import ImageDraw, Image, ImageFont
+import calendar, datetime
 
 
 def image_draw(epd_width, epd_height):
-    font24 = ImageFont.truetype('Font.ttc', 24)
-    Himage = Image.open('poggers.bmp')
-    return Himage
+    font = ImageFont.truetype('CourierStd.otf', 32)
     Himage = Image.new('1', (epd_width, epd_height), 255)
     draw = ImageDraw.Draw(Himage)
-    draw.text((10, 0), 'hello world', font=font24, fill=0)
-    draw.text((10, 20), '7.5inch e-Paper', font=font24, fill=0)
-    draw.text((150, 0), u'微雪电子', font=font24, fill=0)
-    draw.line((20, 50, 70, 100), fill=0)
-    draw.line((70, 50, 20, 100), fill=0)
-    draw.rectangle((20, 50, 70, 100), outline=0)
+    cal = calendar.TextCalendar(calendar.SUNDAY)
+    now = datetime.datetime.now()
+    monthCal = cal.formatmonth(now.year, now.month)
+    cal_topleftx = epd_width/2
+    cal_toplefty = 0
+    draw.text((cal_topleftx+10, cal_toplefty+20), monthCal, font=font, fill=0)
     draw.line((epd_width / 2, 0, epd_width / 2, epd_height), fill=0, width=2)
-    draw.line((165, 50, 165, 100), fill=0)
-    draw.line((140, 75, 190, 75), fill=0)
-    draw.arc((140, 50, 190, 100), 0, 360, fill=0)
-    draw.rectangle((80, 50, 130, 100), fill=0)
-    draw.chord((200, 50, 250, 100), 0, 360, fill=0)
+    draw.line((epd_width / 2, epd_height / 2, epd_width, epd_height / 2), fill=0, width=2)
+    draw.text((epd_width / 2 + 10, epd_height / 2 + 10), "Weather", font=font)
     return Himage

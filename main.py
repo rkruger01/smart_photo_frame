@@ -8,9 +8,9 @@ from draw import image_draw
 def main():
     try:
         epd = ep_lib.EPD()
+        img = image_draw(epd.width, epd.height)
         epd.init()
         epd.clear()
-        img = image_draw(epd.width, epd.height)
         epd.display(epd.getbuffer(img))
         wait = input()
         epd.clear()
