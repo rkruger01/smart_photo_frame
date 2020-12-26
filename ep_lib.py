@@ -145,7 +145,7 @@ class EPD:
         epdconfig.delay_ms(100)
         self.ReadBusy()
         
-    def Clear(self):
+    def clear(self):
         self.send_command(0x10)
         for i in range(0, int(self.width * self.height / 8)):
             self.send_data(0x00)
