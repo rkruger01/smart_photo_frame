@@ -3,6 +3,8 @@ from PIL import ImageDraw, Image, ImageFont
 
 def image_draw(epd_width, epd_height):
     font24 = ImageFont.truetype('Font.ttc', 24)
+    Himage = Image.open('poggers.bmp')
+    return Himage
     Himage = Image.new('1', (epd_width, epd_height), 255)
     draw = ImageDraw.Draw(Himage)
     draw.text((10, 0), 'hello world', font=font24, fill=0)
