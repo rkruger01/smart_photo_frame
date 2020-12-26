@@ -1,3 +1,4 @@
+#!/usr/bin/python3
 from PIL import ImageDraw, Image, ImageFont
 import time
 import ep_lib
@@ -23,6 +24,8 @@ def main():
         draw.rectangle((80, 50, 130, 100), fill=0)
         draw.chord((200, 50, 250, 100), 0, 360, fill=0)
         epd.display(epd.getbuffer(Himage))
+        wait = input()
+        epd.clear()
         epd.sleep()
     except IOError as e:
         logging.info(e)
