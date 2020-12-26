@@ -1,7 +1,11 @@
 from draw import image_draw
+import os, logging
+
+debug = False
 
 
 def main():
+    logging.basicConfig(level=os.environ.get("LOGLEVEL", "DEBUG" if debug else "INFO"))
     img = image_draw(800, 480)
     img.show()
     return 0
