@@ -1,6 +1,8 @@
 import calendar
 import datetime
 import logging
+import sys
+
 import requests
 from math import floor
 from PIL import ImageDraw, Image, ImageFont
@@ -16,13 +18,12 @@ weather_font_dict = {
     '04n': '\uf013', '09n': '\uf037', '10n': '\uf036',
     '11n': '\uf03b', '13n': '\uf038', '50n': '\uf023'
 }
-
-textfont32 = ImageFont.truetype('CourierStd.otf', 32)
-textfont24 = ImageFont.truetype('CourierStd.otf', 24)
-textfont16 = ImageFont.truetype('CourierStd.otf', 16)
-textfont12 = ImageFont.truetype('CourierStd.otf', 14)
-weatherfont48 = ImageFont.truetype('weathericons-regular-webfont.ttf', 48)
-weatherfont32 = ImageFont.truetype('weathericons-regular-webfont.ttf', 32)
+weatherfont48 = ImageFont.truetype('fonts/weathericons-regular-webfont.ttf', 48)
+weatherfont32 = ImageFont.truetype('fonts/weathericons-regular-webfont.ttf', 32)
+textfont32 = ImageFont.load('fonts/ter-u32n.pil')
+textfont24 = ImageFont.load('fonts/ter-u24n.pil')
+textfont16 = ImageFont.load('fonts/ter-u16n.pil')
+textfont12 = ImageFont.load('fonts/ter-u12n.pil')
 
 
 def image_draw(epd_width, epd_height, config_file_name="config.txt"):
@@ -59,19 +60,21 @@ def image_draw(epd_width, epd_height, config_file_name="config.txt"):
     # Calculate header format
     cal_header = calendar.month_name[now.month] + ' ' + str(now.year)
     w, h = draw.textsize(cal_header, font=textfont32)
-    draw.rectangle([(cal_topleftx, cal_toplefty), (epd_width, cal_toplefty + 2 * h)], fill=0)
-    draw.text((cal_topleftx + (cal_topleftx - w) / 2, cal_toplefty + cal_y_offset - 40), cal_header, font=textfont32, fill=255)
+    draw.rectangle([(cal_topleftx, cal_toplefty), (epd_width, cal_toplefty + 1.5 * h)], fill=0)
+    draw.text((cal_topleftx + (cal_topleftx - w) / 2, cal_toplefty + cal_y_offset - 40), cal_header, font=textfont32,
+              fill=255)
     y = 30
     # Draw calendar rows
     days = 'Su Mo Tu We Th Fr Sa'
-    draw.text((cal_topleftx + cal_x_offset, cal_toplefty + cal_y_offset), days, font=textfont32)
+    w, h = draw.textsize(days, font=textfont32)
+    draw.text((cal_topleftx + (cal_topleftx - w) / 2, cal_toplefty + cal_y_offset), days, font=textfont32)
     for row in cal_with_zeros:
         row = [' ' + (str(x)) if x < 10 else str(x) for x in row]  # list comprehension magic
         row = ['  ' if x == ' 0' else x for x in row]  # Remove zeros from calendar
         line = ' '.join(row)
         logging.debug("Printing calendar row starting at {},{}".format(cal_topleftx + cal_x_offset,
                                                                        cal_toplefty + cal_y_offset + y))
-        draw.text((cal_topleftx + cal_x_offset, cal_toplefty + cal_y_offset + y), line, font=textfont32)
+        draw.text((cal_topleftx + (cal_topleftx - w) / 2, cal_toplefty + cal_y_offset + y), line, font=textfont32)
         y += 30
     offset_from_zero = now.day + leading_zeroes - 1
     today_x_grid = offset_from_zero % 7
@@ -80,7 +83,7 @@ def image_draw(epd_width, epd_height, config_file_name="config.txt"):
     true_date_w, true_date_h = draw.textsize(" 00", font=textfont32)
     px_buffer = 4
     square_w, square_h = draw.textsize("00", font=textfont32)
-    start_x = cal_topleftx + cal_x_offset + (true_date_w * today_x_grid) - px_buffer
+    start_x = cal_topleftx + (cal_topleftx - w) / 2 + (true_date_w * today_x_grid) - px_buffer
     start_y = cal_toplefty + cal_y_offset + (today_y_grid * 30) + 28
     logging.debug("Square starting at {},{}".format(start_x, start_y))
     draw.rectangle([(start_x, start_y), (start_x + square_w + 2 * px_buffer, start_y + square_h + 2 * px_buffer)],
@@ -93,103 +96,135 @@ def image_draw(epd_width, epd_height, config_file_name="config.txt"):
             "http://api.positionstack.com/v1/forward?access_key={}&query={}&limit=1".format(positionstack_api_key,
                                                                                             query))
         geolocation = r.json()
-        logging.debug("Weather fetched for {}".format(geolocation["data"][0]["label"]))
+        try:
+            logging.debug("Weather fetched for {}".format(geolocation["data"][0]["label"]))
+        except TypeError:
+            logging.error("Error occured when trying to fetch weather location")
+            sys.exit(1)
         weather_lat = geolocation["data"][0]["latitude"]
         weather_long = geolocation["data"][0]["longitude"]
         # pull from weather service
         r = requests.get(
             "https://api.openweathermap.org/data/2.5/onecall?lat={}&lon={}&appid={}&units={}".format(weather_lat,
-                                                weather_long,owm_api_key,weather_units))
+                                                                                                     weather_long,
+                                                                                                     owm_api_key,
+                                                                                                     weather_units))
         logging.debug("Openweathermap returned status code " + str(r.status_code))
         weather = r.json()
-
         # Current Weather
         weather_header = "Weather"
         weather_topleftx = epd_width / 2
         weather_toplefty = epd_height / 2
-        w, h = draw.textsize(weather_header, font=textfont32)
-        draw.rectangle([(weather_topleftx, weather_toplefty), (epd_width, weather_toplefty + 2 * h)], fill=0)
-        draw.text((weather_topleftx + (cal_topleftx - w) / 2, weather_toplefty + 5), "Weather", font=textfont32,
-                  fill=255)
-        currentx = weather_topleftx + 30
+        todayx = weather_topleftx + 100
         forecasty = weather_toplefty + 50
-        draw.text((currentx, forecasty), "Now", font=textfont32)
-        draw.text((currentx + 10, forecasty + 25), weather_font_dict[weather["current"]["weather"][0]["icon"]],
+        tomorrowx = todayx + 130
+        weather_image_offset = 30
+        tempoffset = 100
+        w, h = draw.textsize(weather_header, font=textfont32)
+        draw.rectangle([(weather_topleftx, weather_toplefty), (epd_width, weather_toplefty + 1.5 * h)], fill=0)
+        draw.text((weather_topleftx + (weather_topleftx - w) / 2, weather_toplefty + 5), "Weather", font=textfont32,
+                  fill=255)
+        w, h = draw.textsize("Now", font=textfont32)
+        draw.text((weather_topleftx + ((todayx - weather_topleftx) - w) / 2, forecasty), "Now", font=textfont32)
+        w, h = draw.textsize(weather_font_dict[weather["current"]["weather"][0]["icon"]], font=weatherfont48)
+        draw.text((weather_topleftx + ((todayx - weather_topleftx) - w) / 2, forecasty + weather_image_offset),
+                  weather_font_dict[weather["current"]["weather"][0]["icon"]],
                   font=weatherfont48,
                   fill=0, )
-        draw.text((currentx + 10, forecasty + 100), str(round(weather["current"]["temp"])) + "°", font=textfont24,
+        w, h = draw.textsize(str(round(weather["current"]["temp"])) + "°", font=textfont24)
+        draw.text((weather_topleftx + ((todayx - weather_topleftx) - w) / 2, forecasty + tempoffset),
+                  str(round(weather["current"]["temp"])) + "°", font=textfont24,
                   fill=0)
-        draw.text((currentx - 18, forecasty + 128), "Feels Like:", font=textfont16,
+        w, h = draw.textsize("Feels Like:", font=textfont16)
+        draw.text((weather_topleftx + ((todayx - weather_topleftx) - w) / 2, forecasty + 128), "Feels Like:",
+                  font=textfont16,
                   fill=0)
-        draw.text((currentx + 10, forecasty + 150), str(round(weather["current"]["feels_like"])) + "°", font=textfont24,
+        w, h = draw.textsize(str(round(weather["current"]["feels_like"])) + "°", font=textfont24)
+        draw.text((weather_topleftx + ((todayx - weather_topleftx) - w) / 2, forecasty + 145),
+                  str(round(weather["current"]["feels_like"])) + "°", font=textfont24,
                   fill=0)
 
         # Today's Forecast
-        todayx = currentx + 100
-        draw.text((todayx, forecasty), "Today", font=textfont32)
-        draw.text((todayx + 15, forecasty + 25), weather_font_dict[weather["daily"][0]["weather"][0]["icon"]],
+        w, h = draw.textsize("Today", font=textfont32)
+        draw.text((todayx + ((tomorrowx - todayx) - w) / 2, forecasty), "Today", font=textfont32)
+        w, h = draw.textsize(weather_font_dict[weather["daily"][0]["weather"][0]["icon"]],
+                  font=weatherfont48)
+        draw.text((todayx + ((tomorrowx - todayx) - w) / 2, forecasty + weather_image_offset), weather_font_dict[weather["daily"][0]["weather"][0]["icon"]],
                   font=weatherfont48,
                   fill=0)
         todaymintemp = round(weather["daily"][0]["temp"]["min"])
         todaymaxtemp = round(weather["daily"][0]["temp"]["max"])
-        draw.text((todayx + 5, forecasty + 100), str(todaymaxtemp) + "°/" + str(todaymintemp) + "°", font=textfont24,
+        w, h = draw.textsize(str(todaymaxtemp) + "°/" + str(todaymintemp) + "°", font=textfont24)
+        draw.text((todayx + ((tomorrowx - todayx) - w) / 2, forecasty + tempoffset), str(todaymaxtemp) + "°/" + str(todaymintemp) + "°", font=textfont24,
                   fill=0)
-        precipxoffset = 10
+        precipxoffset = 40
         precipyoffset = 120
         # today's precip chance
         if todaymintemp < 32:
             # snow image!
-            draw.text((todayx + precipxoffset, forecasty + precipyoffset), weather_font_dict['13d'],
+            w_image, h = draw.textsize( weather_font_dict['13d'],font=weatherfont32)
+            w_text, h = draw.textsize(str(round(weather["daily"][0]["pop"])), font=textfont32)
+            sum_w = w_image + w_text + precipxoffset/2
+            draw.text((todayx + ((tomorrowx - todayx) - sum_w) / 2, forecasty + precipyoffset), weather_font_dict['13d'],
                       font=weatherfont32,
                       fill=0)
         else:
             # lame, no snow
-            draw.text((todayx + precipxoffset, forecasty + precipyoffset), weather_font_dict['10d'],
+            w_image, h = draw.textsize(weather_font_dict['10d'], font=weatherfont32)
+            w_text, h = draw.textsize(str(round(weather["daily"][0]["pop"])), font=textfont32)
+            sum_w = w_image + w_text + precipxoffset/2
+            draw.text((todayx + ((tomorrowx - todayx) - sum_w) / 2, forecasty + precipyoffset), weather_font_dict['10d'],
                       font=weatherfont32,
                       fill=0)
-        draw.text((todayx + precipxoffset + 40, forecasty + precipyoffset + 13),
+        draw.text((todayx + ((tomorrowx - todayx) - sum_w) / 2 + precipxoffset, forecasty + precipyoffset + 13),
                   str(round(weather["daily"][0]["pop"])) + "%", font=textfont32, fill=0)
 
         # Tomorrow's Forecast
-        tomorrowx = todayx + 110
 
-        draw.text((tomorrowx, forecasty), "Tomorrow", font=textfont32)
-        draw.text((tomorrowx + 45, forecasty + 25), weather_font_dict[weather["daily"][1]["weather"][0]["icon"]],
+        w, h = draw.textsize("Tomorrow", font=textfont32)
+        draw.text((tomorrowx + ((epd_width - tomorrowx) - w) / 2, forecasty), "Tomorrow", font=textfont32)
+        w, h = draw.textsize(weather_font_dict[weather["daily"][1]["weather"][0]["icon"]], font=weatherfont48)
+        draw.text((tomorrowx + ((epd_width - tomorrowx) - w) / 2, forecasty + weather_image_offset), weather_font_dict[weather["daily"][1]["weather"][0]["icon"]],
                   font=weatherfont48,
                   fill=0)
         tomorrowmaxtemp = round(weather["daily"][1]["temp"]["max"])
         tomorrowmintemp = round(weather["daily"][1]["temp"]["min"])
-        draw.text((tomorrowx + 30, forecasty + 100), str(tomorrowmaxtemp) + "°/" + str(tomorrowmintemp) + "°",
+        w, h = draw.textsize(str(tomorrowmaxtemp) + "°/" + str(tomorrowmintemp) + "°", font=textfont24)
+
+        draw.text((tomorrowx + ((epd_width - tomorrowx) - w) / 2, forecasty + tempoffset), str(tomorrowmaxtemp) + "°/" + str(tomorrowmintemp) + "°",
                   font=textfont24,
                   fill=0)
-        precipxoffset += 30  # to fix scaling
         # tomorrow's precip chance
         if tomorrowmintemp < 32:
             # snow image!
-            draw.text((tomorrowx + precipxoffset, forecasty + precipyoffset), weather_font_dict['13d'],
+            w_image, h = draw.textsize(weather_font_dict['13d'], font=weatherfont32)
+            w_text, h = draw.textsize(str(round(weather["daily"][1]["pop"])), font=textfont32)
+            sum_w = w_image + w_text + precipxoffset / 2
+            draw.text((tomorrowx + ((epd_width - tomorrowx) - sum_w) / 2, forecasty + precipyoffset), weather_font_dict['13d'],
                       font=weatherfont32,
                       fill=0)
         else:
             # lame, no snow
-            draw.text((tomorrowx + precipxoffset, forecasty + precipyoffset), weather_font_dict['10d'],
+            w_image, h = draw.textsize(weather_font_dict['10d'], font=weatherfont32)
+            w_text, h = draw.textsize(str(round(weather["daily"][1]["pop"])), font=textfont32)
+            sum_w = w_image + w_text + precipxoffset / 2
+            draw.text((tomorrowx + ((epd_width - tomorrowx) - sum_w) / 2, forecasty + precipyoffset), weather_font_dict['10d'],
                       font=weatherfont32,
                       fill=0)
-        draw.text((tomorrowx + precipxoffset + 40, forecasty + precipyoffset + 13),
+        draw.text((tomorrowx + ((epd_width - tomorrowx) - sum_w) / 2 + precipxoffset, forecasty + precipyoffset + 13),
                   str(round(weather["daily"][1]["pop"])) + "%", font=textfont32, fill=0)
 
         # Draw division lines
         if draw_weather_lines:
-            divider_offset = 6
             weather_bottom_divider_offset = 18
-            draw.line([(todayx - divider_offset, weather_toplefty + 2 * h),
-                       (todayx - divider_offset, epd_height - weather_bottom_divider_offset)], width=2)
-            draw.line([(tomorrowx - divider_offset, weather_toplefty + 2 * h),
-                       (tomorrowx - divider_offset, epd_height - weather_bottom_divider_offset)], width=2)
+            draw.line([(todayx, weather_toplefty + 1.5 * h),
+                       (todayx, epd_height - weather_bottom_divider_offset)], width=2)
+            draw.line([(tomorrowx, weather_toplefty + 1.5 * h),
+                       (tomorrowx, epd_height - weather_bottom_divider_offset)], width=2)
             draw.line([(weather_topleftx, epd_height - weather_bottom_divider_offset),
                        (epd_width, epd_height - weather_bottom_divider_offset)], width=2)
-            pass
         # Print weather location, update time
         draw.text((weather_topleftx + 8, epd_height - 12), "{}".format(geolocation["data"][0]["label"]),
                   font=textfont12)
-        draw.text((epd_width - 110, epd_height - 12), "Updated {}:{}".format(now.hour, now.minute), font=textfont12)
+        draw.text((epd_width - 110, epd_height - 12), "Updated {}:{}".format(now.hour, str(now.minute).zfill(2)), font=textfont12)
     return Himage
