@@ -1,7 +1,7 @@
 from draw import image_draw
 import os, logging
 
-debug = False
+debug = True
 
 
 def main():
