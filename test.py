@@ -1,5 +1,7 @@
+import logging
+import os
+
 from draw import image_draw
-import os, logging
 
 debug = True
 
