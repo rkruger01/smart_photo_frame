@@ -8,11 +8,11 @@ from math import floor
 from PIL import ImageDraw, Image, ImageFont
 import configparser
 
-
-do_fetch_weather = False
+do_fetch_weather = True
 draw_weather_lines = True
 do_draw_calendar = True
 do_display_news = True
+do_draw_border = True
 
 weather_font_dict = {
     '01d': '\uf00d', '02d': '\uf002', '03d': '\uf013',
@@ -29,35 +29,40 @@ textfont32 = ImageFont.load('fonts/ter-u32n.pil')
 textfont24 = ImageFont.load('fonts/ter-u24n.pil')
 textfont16 = ImageFont.load('fonts/ter-u16n.pil')
 textfont12 = ImageFont.load('fonts/ter-u12n.pil')
+included_general_news_domains = ["cnn.com", "nytimes.com", "usatoday.com", "reuters.com", "politico.com",
+                    "npr.org", "latimes.com", "abcnews.go.com", "nbcnews.com", "cbsnews.com"]
+excluded_tech_domains = ["businessinsider.com", "qz.com"]
+general_news_non_tech_url = "https://api.thenewsapi.com/v1/news/top?api_token={}&language=en&exclude_categories=tech&locale=us&domains={}"
+tech_news_url = "https://api.thenewsapi.com/v1/news/top?api_token={}&language=en&categories=tech&locale=us&exclude_domains={}"
 
 
 def display_news(epd_width, epd_height, draw: ImageDraw, config: configparser.ConfigParser):
+    # This function could use a refactor because of all of the code reuse, but it works
     news_rightx = epd_width / 2
-    news_header = "Top Headlines"
+    general_news_header = "Top USA Headlines"
+    tech_news_header = "Top Tech Headlines"
+    header_font = textfont32
     headline_font = textfont16
     headline_offset_from_side = 10
     second_line_x_offset_from_headline = 10
-    first_headline_offset_from_top = 60
-
+    first_headline_offset_from_top = 50
     try:
         api_key = config['Config']['newsapi_key']
     except configparser.MissingSectionHeaderError as e:
         logging.error(e)
         sys.exit(1)
-    r = requests.get("https://api.thenewsapi.com/v1/news/top?api_token={}&language=en&exclude_categories=tech".format(api_key))
+    # Draw header rectangle
+    w, h = draw.textsize(general_news_header, font=header_font)
+    draw.text(((news_rightx - w) / 2, 10), general_news_header, font=header_font)
+    y = first_headline_offset_from_top
+    r = requests.get(general_news_non_tech_url.format(api_key, ",".join(included_general_news_domains)))
     results = r.json()
     general_articles = results['data']
     # Process article headers
     titles_with_source = []
     for article in general_articles:
         titles_with_source.append([article['source'], article['title']])
-    # Draw header rectangle
-    w, h = draw.textsize(news_header, font=textfont32)
-    draw.text(((news_rightx - w) / 2, 10), news_header, font=textfont32)
-    # TODO: remove later, used for left justify
-    draw.line([(0, 0), (0, epd_height)])
     # For each headline: Calculate size, trim remainder, display
-    y = first_headline_offset_from_top
     for headline in titles_with_source:
         article_source = headline[0]
         article_title = headline[1]
@@ -76,6 +81,9 @@ def display_news(epd_width, epd_height, draw: ImageDraw, config: configparser.Co
         y += h
         if second_line:
             # trim excess characters and replace with "..." at the end
+            second_line = second_line.encode('latin-1', 'ignore')
+            encoded_space = " ".encode('latin-1')
+            encoded_ellipse = "...".encode('latin-1')
             w, h = draw.textsize(second_line, font=headline_font)
             w_periods, h = draw.textsize("...", font=headline_font)
             needs_periods = False
@@ -85,17 +93,71 @@ def display_news(epd_width, epd_height, draw: ImageDraw, config: configparser.Co
                     second_line = second_line[:-1]
                     w, h = draw.textsize(second_line, font=headline_font)
             if needs_periods:
-                if second_line.endswith(" "):
+                if second_line.endswith(encoded_space):
                     # Removes floating space issue
                     second_line = second_line[:-1]
-                second_line = second_line + "..."
+                second_line = second_line + encoded_ellipse
+            draw.text((headline_offset_from_side + second_line_x_offset_from_headline, y), second_line,
+                      font=headline_font)
+            y += 1.3 * h
+    # Do Tech news here
+
+    w, h = draw.textsize(tech_news_header, font=header_font)
+    draw.text(((news_rightx - w) / 2, y), tech_news_header, font=header_font)
+    y += 1.2*h
+    r = requests.get(tech_news_url.format(api_key, ",".join(excluded_tech_domains)))
+    results = r.json()
+    general_articles = results['data']
+
+    # Process article headers
+    titles_with_source = []
+    for article in general_articles:
+        titles_with_source.append([article['source'], article['title']])
+
+    # For each headline: Calculate size, trim remainder, display
+    for headline in titles_with_source:
+        article_source = headline[0]
+        article_title = headline[1]
+        second_line = ""
+        text_to_display = article_source + ": " + article_title
+        text_to_display = text_to_display.encode('latin-1', 'ignore')
+        w, h = draw.textsize(text_to_display, font=headline_font)
+        # Split text into at most 2 lines
+        while w + headline_offset_from_side > news_rightx:
+            article_title, excess_word = article_title.rsplit(" ", 1)
+            second_line = excess_word + " " + second_line
+            text_to_display = article_source + ": " + article_title
+            text_to_display = text_to_display.encode('latin-1', 'ignore')
+            w, h = draw.textsize(text_to_display, font=headline_font)
+        draw.text((headline_offset_from_side, y), text_to_display, font=headline_font)
+        y += h
+        if second_line:
+            # trim excess characters and replace with "..." at the end
+            second_line = second_line.encode('latin-1', 'ignore')
+            encoded_space = " ".encode('latin-1')
+            encoded_ellipse = "...".encode('latin-1')
+            w, h = draw.textsize(second_line, font=headline_font)
+            w_periods, h = draw.textsize("...", font=headline_font)
+            needs_periods = False
+            if w + headline_offset_from_side + second_line_x_offset_from_headline > news_rightx:
+                while w + w_periods + headline_offset_from_side + second_line_x_offset_from_headline > news_rightx:
+                    needs_periods = True
+                    second_line = second_line[:-1]
+                    w, h = draw.textsize(second_line, font=headline_font)
+            if needs_periods:
+                if second_line.endswith(encoded_space):
+                    # Removes floating space issue
+                    second_line = second_line[:-1]
+                second_line = second_line + encoded_ellipse
             draw.text((headline_offset_from_side + second_line_x_offset_from_headline, y), second_line,
                       font=headline_font)
             y += 1.5 * h
+        else:
+            y += .6*h
     return
 
 
-def draw_calendar(epd_width, epd_height, draw: ImageDraw, now: datetime):
+def draw_calendar(epd_width, draw: ImageDraw, now: datetime):
     # Generate calendar in top-right
     cal_topleftx = epd_width / 2
     cal_toplefty = 0
@@ -312,11 +374,16 @@ def image_draw(epd_width, epd_height, config_file_name="config.txt"):
     draw.line((epd_width / 2, epd_height / 2, epd_width, epd_height / 2), fill=0, width=2)
     now = datetime.datetime.now()
     if do_draw_calendar:
-        draw_calendar(epd_width, epd_height, draw, now)
+        draw_calendar(epd_width, draw, now)
     if do_fetch_weather:
         fetch_weather(epd_width, epd_height, draw, now, config)
     if do_display_news:
         display_news(epd_width, epd_height, draw, config)
+    if do_draw_border:
+        draw.line([(0, 0), (0, epd_height)])
+        draw.line([(0,0),(epd_width,0)])
+        draw.line([(0,epd_height),(epd_width,epd_height)], width=3)
+        draw.line([(epd_width,0),(epd_width,epd_height)], width=3)
     # Draw current time (not for clock, mostly to make sure it's running correctly
     w, h = draw.textsize("Updated {}:{}".format(now.hour, str(now.minute).zfill(2)), font=textfont12)
     draw.text((epd_width - w - 5, epd_height - h - 2), "Updated {}:{}".format(now.hour, str(now.minute).zfill(2)),
