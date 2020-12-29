@@ -354,7 +354,8 @@ def fetch_weather(epd_width, epd_height, draw: ImageDraw, now: datetime, config:
         draw.line([(weather_topleftx, epd_height - weather_bottom_divider_offset),
                    (epd_width, epd_height - weather_bottom_divider_offset)], width=2)
     # Print weather location, update time
-    draw.text((weather_topleftx + 8, epd_height - 12), "{}".format(geolocation["data"][0]["label"]),
+    w, h = draw.textsize("{}".format(geolocation["data"][0]["label"]), font=textfont12)
+    draw.text((weather_topleftx + 8, epd_height - h-2), "{}".format(geolocation["data"][0]["label"]),
               font=textfont12)
 
 

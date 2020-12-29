@@ -18,12 +18,7 @@ def main():
         logging.debug("Initialization complete, clearing display")
         epd.clear()
         epd.display(epd.getbuffer(img))
-        logging.debug("Display complete, waiting on user input")
-        epd.sleep()
-        wait = input()
-        logging.debug("Input received, clearing screen")
-        epd.init()
-        epd.clear()
+        logging.debug("Display complete")
         logging.debug("Entering sleep mode")
         epd.sleep()
     except IOError as e:
