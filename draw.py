@@ -8,9 +8,11 @@ from math import floor
 from PIL import ImageDraw, Image, ImageFont
 import configparser
 
-do_fetch_weather = True
+
+do_fetch_weather = False
 draw_weather_lines = True
 do_draw_calendar = True
+do_display_news = True
 
 weather_font_dict = {
     '01d': '\uf00d', '02d': '\uf002', '03d': '\uf013',
@@ -20,12 +22,77 @@ weather_font_dict = {
     '04n': '\uf013', '09n': '\uf037', '10n': '\uf036',
     '11n': '\uf03b', '13n': '\uf038', '50n': '\uf023'
 }
+
 weatherfont48 = ImageFont.truetype('fonts/weathericons-regular-webfont.ttf', 48)
 weatherfont32 = ImageFont.truetype('fonts/weathericons-regular-webfont.ttf', 32)
 textfont32 = ImageFont.load('fonts/ter-u32n.pil')
 textfont24 = ImageFont.load('fonts/ter-u24n.pil')
 textfont16 = ImageFont.load('fonts/ter-u16n.pil')
 textfont12 = ImageFont.load('fonts/ter-u12n.pil')
+
+
+def display_news(epd_width, epd_height, draw: ImageDraw, config: configparser.ConfigParser):
+    news_rightx = epd_width / 2
+    news_header = "Top Headlines"
+    headline_font = textfont16
+    headline_offset_from_side = 10
+    second_line_x_offset_from_headline = 10
+    first_headline_offset_from_top = 60
+
+    try:
+        api_key = config['Config']['newsapi_key']
+    except configparser.MissingSectionHeaderError as e:
+        logging.error(e)
+        sys.exit(1)
+    r = requests.get("https://api.thenewsapi.com/v1/news/top?api_token={}&language=en&exclude_categories=tech".format(api_key))
+    results = r.json()
+    general_articles = results['data']
+    # Process article headers
+    titles_with_source = []
+    for article in general_articles:
+        titles_with_source.append([article['source'], article['title']])
+    # Draw header rectangle
+    w, h = draw.textsize(news_header, font=textfont32)
+    draw.text(((news_rightx - w) / 2, 10), news_header, font=textfont32)
+    # TODO: remove later, used for left justify
+    draw.line([(0, 0), (0, epd_height)])
+    # For each headline: Calculate size, trim remainder, display
+    y = first_headline_offset_from_top
+    for headline in titles_with_source:
+        article_source = headline[0]
+        article_title = headline[1]
+        second_line = ""
+        text_to_display = article_source + ": " + article_title
+        text_to_display = text_to_display.encode('latin-1', 'ignore')
+        w, h = draw.textsize(text_to_display, font=headline_font)
+        # Split text into at most 2 lines
+        while w + headline_offset_from_side > news_rightx:
+            article_title, excess_word = article_title.rsplit(" ", 1)
+            second_line = excess_word + " " + second_line
+            text_to_display = article_source + ": " + article_title
+            text_to_display = text_to_display.encode('latin-1', 'ignore')
+            w, h = draw.textsize(text_to_display, font=headline_font)
+        draw.text((headline_offset_from_side, y), text_to_display, font=headline_font)
+        y += h
+        if second_line:
+            # trim excess characters and replace with "..." at the end
+            w, h = draw.textsize(second_line, font=headline_font)
+            w_periods, h = draw.textsize("...", font=headline_font)
+            needs_periods = False
+            if w + headline_offset_from_side + second_line_x_offset_from_headline > news_rightx:
+                while w + w_periods + headline_offset_from_side + second_line_x_offset_from_headline > news_rightx:
+                    needs_periods = True
+                    second_line = second_line[:-1]
+                    w, h = draw.textsize(second_line, font=headline_font)
+            if needs_periods:
+                if second_line.endswith(" "):
+                    # Removes floating space issue
+                    second_line = second_line[:-1]
+                second_line = second_line + "..."
+            draw.text((headline_offset_from_side + second_line_x_offset_from_headline, y), second_line,
+                      font=headline_font)
+            y += 1.5 * h
+    return
 
 
 def draw_calendar(epd_width, epd_height, draw: ImageDraw, now: datetime):
@@ -70,6 +137,7 @@ def draw_calendar(epd_width, epd_height, draw: ImageDraw, now: datetime):
     logging.debug("Square starting at {},{}".format(start_x, start_y))
     draw.rectangle([(start_x, start_y), (start_x + square_w + 2 * px_buffer, start_y + square_h + 2 * px_buffer)],
                    width=2)
+    return
 
 
 def fetch_weather(epd_width, epd_height, draw: ImageDraw, now: datetime, config: configparser.ConfigParser):
@@ -81,7 +149,7 @@ def fetch_weather(epd_width, epd_height, draw: ImageDraw, now: datetime, config:
         weather_country = config['Config']['city_country_code']
     except configparser.MissingSectionHeaderError as e:
         logging.error(e)
-        exit(1)
+        sys.exit(1)
     # geomap address to coordinates
     query = weather_zip + "," + weather_country
     r = requests.get(
@@ -247,7 +315,8 @@ def image_draw(epd_width, epd_height, config_file_name="config.txt"):
         draw_calendar(epd_width, epd_height, draw, now)
     if do_fetch_weather:
         fetch_weather(epd_width, epd_height, draw, now, config)
-
+    if do_display_news:
+        display_news(epd_width, epd_height, draw, config)
     # Draw current time (not for clock, mostly to make sure it's running correctly
     w, h = draw.textsize("Updated {}:{}".format(now.hour, str(now.minute).zfill(2)), font=textfont12)
     draw.text((epd_width - w - 5, epd_height - h - 2), "Updated {}:{}".format(now.hour, str(now.minute).zfill(2)),
