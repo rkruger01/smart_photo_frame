@@ -2,7 +2,7 @@ import calendar
 import datetime
 import logging
 import sys
-
+import os
 import requests
 from math import floor
 from PIL import ImageDraw, Image, ImageFont
@@ -23,12 +23,12 @@ weather_font_dict = {
     '11n': '\uf03b', '13n': '\uf038', '50n': '\uf023'
 }
 
-weatherfont48 = ImageFont.truetype('fonts/weathericons-regular-webfont.ttf', 48)
-weatherfont32 = ImageFont.truetype('fonts/weathericons-regular-webfont.ttf', 32)
-textfont32 = ImageFont.load('fonts/ter-u32n.pil')
-textfont24 = ImageFont.load('fonts/ter-u24n.pil')
-textfont16 = ImageFont.load('fonts/ter-u16n.pil')
-textfont12 = ImageFont.load('fonts/ter-u12n.pil')
+weatherfont48 = ImageFont.truetype(os.path.join(os.path.dirname(__file__), 'fonts', 'weathericons-regular-webfont.ttf'), 48)
+weatherfont32 = ImageFont.truetype(os.path.join(os.path.dirname(__file__), 'fonts', 'weathericons-regular-webfont.ttf'), 32)
+textfont32 = ImageFont.load(os.path.join(os.path.dirname(__file__), 'fonts', 'ter-u32n.pil'))
+textfont24 = ImageFont.load(os.path.join(os.path.dirname(__file__), 'fonts', 'ter-u24n.pil'))
+textfont16 = ImageFont.load(os.path.join(os.path.dirname(__file__), 'fonts', 'ter-u16n.pil'))
+textfont12 = ImageFont.load(os.path.join(os.path.dirname(__file__), 'fonts', 'ter-u12n.pil'))
 included_general_news_domains = ["cnn.com", "nytimes.com", "usatoday.com", "reuters.com", "politico.com",
                     "npr.org", "latimes.com", "abcnews.go.com", "nbcnews.com", "cbsnews.com"]
 excluded_tech_domains = ["businessinsider.com", "qz.com"]
