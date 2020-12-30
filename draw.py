@@ -362,7 +362,7 @@ def fetch_weather(epd_width, epd_height, draw: ImageDraw, now: datetime, config:
 def image_draw(epd_width, epd_height, config_file_name="config.txt"):
     config = configparser.ConfigParser()
     try:
-        config.read(config_file_name)
+        config.read(os.path.join(os.path.dirname(__file__), 'fonts', config_file_name))
     except configparser.MissingSectionHeaderError as e:
         logging.error(e)
         exit(1)
