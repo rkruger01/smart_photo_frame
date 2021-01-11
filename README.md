@@ -28,6 +28,7 @@ This is the source code for a Raspberry Pi-powered e-ink photo frame that I've b
 
 4. Run main.py. In about 30 seconds, your e-ink display should update with US news & Tech news headlines, the monthly calendar, and your local weather. If it doesn't work, you can enable ```Debug=True``` in main.py to find any issues.
 
+[Image of output](example_image.PNG?raw=true "Program Output")
 ### Now what?
 
 - Feel free to customize my code and make it your own! I currently have a specific list of websites I want news headlines from, which can be easily changed in draw.py.
