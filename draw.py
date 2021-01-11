@@ -174,28 +174,28 @@ def draw_calendar(epd_width, draw: ImageDraw, now: datetime):
     draw.rectangle([(cal_topleftx, cal_toplefty), (epd_width, cal_toplefty + 1.5 * h)], fill=0)
     draw.text((cal_topleftx + (cal_topleftx - w) / 2, cal_toplefty + cal_y_offset - 40), cal_header, font=textfont32,
               fill=255)
-    y = 30
+    y = h - 3
     # Draw calendar rows
     days = 'Su Mo Tu We Th Fr Sa'
-    w, h = draw.textsize(days, font=textfont32)
-    draw.text((cal_topleftx + (cal_topleftx - w) / 2, cal_toplefty + cal_y_offset), days, font=textfont32)
+    w, h = draw.textsize(days, font=textfont24)
+    draw.text((cal_topleftx + (cal_topleftx - w) / 2, cal_toplefty + cal_y_offset), days, font=textfont24)
     for row in cal_with_zeros:
         row = [' ' + (str(x)) if x < 10 else str(x) for x in row]  # list comprehension magic
         row = ['  ' if x == ' 0' else x for x in row]  # Remove zeros from calendar
         line = ' '.join(row)
         logging.debug("Printing calendar row starting at {},{}".format(cal_topleftx + cal_x_offset,
                                                                        cal_toplefty + cal_y_offset + y))
-        draw.text((cal_topleftx + (cal_topleftx - w) / 2, cal_toplefty + cal_y_offset + y), line, font=textfont32)
-        y += 30
+        draw.text((cal_topleftx + (cal_topleftx - w) / 2, cal_toplefty + cal_y_offset + y), line, font=textfont24)
+        y += h + 3
     offset_from_zero = now.day + leading_zeroes - 1
     today_x_grid = offset_from_zero % 7
     today_y_grid = floor(offset_from_zero // 7)
     logging.debug("Grid coordinates for today's date: {},{}".format(today_x_grid, today_y_grid))
-    true_date_w, true_date_h = draw.textsize(" 00", font=textfont32)
-    px_buffer = 4
-    square_w, square_h = draw.textsize("00", font=textfont32)
+    true_date_w, true_date_h = draw.textsize(" 00", font=textfont24)
+    px_buffer = 3
+    square_w, square_h = draw.textsize("00", font=textfont24)
     start_x = cal_topleftx + (cal_topleftx - w) / 2 + (true_date_w * today_x_grid) - px_buffer
-    start_y = cal_toplefty + cal_y_offset + (today_y_grid * 30) + 28
+    start_y = cal_toplefty + cal_y_offset + (today_y_grid * 30) + true_date_h - 4
     logging.debug("Square starting at {},{}".format(start_x, start_y))
     draw.rectangle([(start_x, start_y), (start_x + square_w + 2 * px_buffer, start_y + square_h + 2 * px_buffer)],
                    width=2)
@@ -362,7 +362,7 @@ def fetch_weather(epd_width, epd_height, draw: ImageDraw, now: datetime, config:
 def image_draw(epd_width, epd_height, config_file_name="config.txt"):
     config = configparser.ConfigParser()
     try:
-        config.read(os.path.join(os.path.dirname(__file__), 'fonts', config_file_name))
+        config.read(os.path.join(os.path.dirname(__file__), config_file_name))
     except configparser.MissingSectionHeaderError as e:
         logging.error(e)
         exit(1)
