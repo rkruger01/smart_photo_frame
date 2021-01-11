@@ -1,0 +1,7 @@
+[Config]
+owm_api_key =
+positionstack_api_key =
+units =
+city_zip_code =
+city_country_code =
+newsapi_key =
