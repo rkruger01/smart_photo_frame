@@ -2,7 +2,7 @@
 
 ### Description
 
-This is the source code for a Raspberry Pi-powered e-ink photo frame that I've been working on for a week or two. It draws from several online services to provide up-to-date headlines, a calendar of the month, and the weather in your area.
+This is the source code for a Raspberry Pi-powered e-ink photo frame that I've been working on for a few weeks. It draws from several online services to provide up-to-date headlines, a calendar of the month, and the weather in your area.
 
 ### Requirements
 
@@ -33,3 +33,8 @@ This is the source code for a Raspberry Pi-powered e-ink photo frame that I've b
 
 - Feel free to customize my code and make it your own! I currently have a specific list of websites I want news headlines from, which can be easily changed in draw.py.
 - You can set up a cron job to automatically run main.py at a rate you want. Keep in mind, some APIs have daily/weekly/monthly call limits.
+
+### Acknowledgements
+
+- [Weather Icons Font](https://github.com/erikflowers/weather-icons)
+- [Terminus Font](http://terminus-font.sourceforge.net/)
