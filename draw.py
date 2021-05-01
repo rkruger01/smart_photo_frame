@@ -360,7 +360,7 @@ def fetch_weather(epd_width, epd_height, draw: ImageDraw, now: datetime, config:
               font=textfont12)
 
 
-def image_draw(epd_width, epd_height, config_file_name="config.old.txt"):
+def image_draw(epd_width, epd_height, config_file_name="config.txt"):
     config = configparser.ConfigParser()
     try:
         config.read(os.path.join(os.path.dirname(__file__), config_file_name))
