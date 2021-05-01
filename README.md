@@ -9,7 +9,7 @@ This is the source code for a Raspberry Pi-powered e-ink photo frame that I've b
  - E-Ink display (I use a [Waveshare 7.5 inch 800x480](https://www.amazon.com/waveshare-7-5inch-HAT-Raspberry-Consumption/dp/B075R4QY3L). Instructions are for this device.)
  - Raspberry Pi with internet access
  - Python3 with [Pillow](https://pillow.readthedocs.io/en/stable/index.html), [requests](https://requests.readthedocs.io/en/master/) installed
- - [OpenWeatherMap](https://openweathermap.org/), [positionstack](https://positionstack.com/), and [TheNewsAPI](https://www.thenewsapi.com/) accounts & API keys  
+ - [Mapbox](https://www.mapbox.com/), [positionstack](https://positionstack.com/), and [TheNewsAPI](https://www.thenewsapi.com/) accounts & API keys  
  - (Technically optional, but highly recommended) Mounting hardware - photo frame, nail, etc.
 
 ### Installation
@@ -20,7 +20,7 @@ This is the source code for a Raspberry Pi-powered e-ink photo frame that I've b
            
         [Config]
         owm_api_key = <OpenWeatherMap API key goes here>
-        positionstack_api_key = <positionstack API key goes here>
+        mapbox_api_key = <mapbox API key goes here>
         units = <imperial or metric (for weather)>
         city_zip_code = <Zip code used for positionstack geolocation lookup>
         city_country_code = <Country code used for positionstack geolocation lookup>
