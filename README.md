@@ -8,14 +8,14 @@ This is the source code for a Raspberry Pi-powered e-ink photo frame that I've b
 
  - E-Ink display (I use a [Waveshare 7.5 inch 800x480](https://www.amazon.com/waveshare-7-5inch-HAT-Raspberry-Consumption/dp/B075R4QY3L). Instructions are for this device.)
  - Raspberry Pi with internet access
- - Python3 with requests package
+ - Python3 with [Pillow](https://pillow.readthedocs.io/en/stable/index.html), [requests](https://requests.readthedocs.io/en/master/) installed
  - [OpenWeatherMap](https://openweathermap.org/), [positionstack](https://positionstack.com/), and [TheNewsAPI](https://www.thenewsapi.com/) accounts & API keys  
  - (Technically optional, but highly recommended) Mounting hardware - photo frame, nail, etc.
 
 ### Installation
 
 1. Configure the Raspberry Pi with the necessary drivers and applications as described by [Waveshare](https://www.waveshare.com/wiki/7.5inch_e-Paper_HAT#Enable_SPI_interface).
-2. Clone the repository to your Raspberry Pi:  ```git clone https://github.com/rkruger01/e_ink_display.git```
+2. Clone the repository to your Raspberry Pi:  ```git clone https://github.com/rkruger01/smart_photo_frame.git```
 3. Open config.txt and enter your configuration information. 
            
         [Config]
