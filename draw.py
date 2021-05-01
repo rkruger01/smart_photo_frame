@@ -195,7 +195,7 @@ def draw_calendar(epd_width, draw: ImageDraw, now: datetime):
     px_buffer = 3
     square_w, square_h = draw.textsize("00", font=textfont24)
     start_x = cal_topleftx + (cal_topleftx - w) / 2 + (true_date_w * today_x_grid) - px_buffer
-    start_y = cal_toplefty + cal_y_offset + (today_y_grid * 30) + true_date_h - 4
+    start_y = cal_toplefty + cal_y_offset + (today_y_grid * 30) + true_date_h - px_buffer
     logging.debug("Square starting at {},{}".format(start_x, start_y))
     draw.rectangle([(start_x, start_y), (start_x + square_w + 2 * px_buffer, start_y + square_h + 2 * px_buffer)],
                    width=2)
@@ -205,7 +205,7 @@ def draw_calendar(epd_width, draw: ImageDraw, now: datetime):
 def fetch_weather(epd_width, epd_height, draw: ImageDraw, now: datetime, config: configparser.ConfigParser):
     try:
         owm_api_key = config['Config']['owm_api_key']
-        positionstack_api_key = config['Config']['positionstack_api_key']
+        mapbox_api_key = config['Config']['mapbox_api_key']
         weather_units = config['Config']['units']
         weather_zip = config['Config']['city_zip_code']
         weather_country = config['Config']['city_country_code']
@@ -215,16 +215,16 @@ def fetch_weather(epd_width, epd_height, draw: ImageDraw, now: datetime, config:
     # geomap address to coordinates
     query = weather_zip + "," + weather_country
     r = requests.get(
-        "http://api.positionstack.com/v1/forward?access_key={}&query={}&limit=1".format(positionstack_api_key,
-                                                                                        query))
+        "https://api.mapbox.com/geocoding/v5/mapbox.places/{}.json?access_token={}".format(query,mapbox_api_key))
     geolocation = r.json()
+
     try:
-        logging.debug("Weather fetched for {}".format(geolocation["data"][0]["label"]))
+        logging.debug("Weather fetched for {}".format(geolocation["features"][0]["place_name"]))
     except TypeError:
         logging.error("Error occured when trying to fetch weather location")
         sys.exit(1)
-    weather_lat = geolocation["data"][0]["latitude"]
-    weather_long = geolocation["data"][0]["longitude"]
+    weather_long = geolocation["features"][0]["center"][0]
+    weather_lat = geolocation["features"][0]["center"][1]
     # pull from weather service
     r = requests.get(
         "https://api.openweathermap.org/data/2.5/onecall?lat={}&lon={}&appid={}&units={}".format(weather_lat,
@@ -261,7 +261,8 @@ def fetch_weather(epd_width, epd_height, draw: ImageDraw, now: datetime, config:
     draw.text((weather_topleftx + ((todayx - weather_topleftx) - w) / 2, forecasty + 128), "Feels Like:",
               font=textfont16,
               fill=0)
-    w, h = draw.textsize(str(round(weather["current"]["feels_like"])) + "°", font=textfont24)
+    w, h = draw.textsize(str(round(weather["current"]["feels_like"]))
+                         + "°", font=textfont24)
     draw.text((weather_topleftx + ((todayx - weather_topleftx) - w) / 2, forecasty + 145),
               str(round(weather["current"]["feels_like"])) + "°", font=textfont24,
               fill=0)
@@ -354,12 +355,12 @@ def fetch_weather(epd_width, epd_height, draw: ImageDraw, now: datetime, config:
         draw.line([(weather_topleftx, epd_height - weather_bottom_divider_offset),
                    (epd_width, epd_height - weather_bottom_divider_offset)], width=2)
     # Print weather location, update time
-    w, h = draw.textsize("{}".format(geolocation["data"][0]["label"]), font=textfont12)
-    draw.text((weather_topleftx + 8, epd_height - h-2), "{}".format(geolocation["data"][0]["label"]),
+    w, h = draw.textsize("{}".format(geolocation["features"][0]["place_name"]), font=textfont12)
+    draw.text((weather_topleftx + 8, epd_height - h-2), "{}".format(geolocation["features"][0]["place_name"]),
               font=textfont12)
 
 
-def image_draw(epd_width, epd_height, config_file_name="config.txt"):
+def image_draw(epd_width, epd_height, config_file_name="config.old.txt"):
     config = configparser.ConfigParser()
     try:
         config.read(os.path.join(os.path.dirname(__file__), config_file_name))
